@@ -10,7 +10,7 @@ You must have a Models folder under /app. All the database models are created un
 
 ## Repositories
 You must have the following folder structure under laravel /app folder.
-```php
+```
 ->app
 |    -> Modules
 |        ->Framework
@@ -85,9 +85,37 @@ abstract class RepositoryImplementation
 # Useage
 Simple instructions to see this repo in action.
 
-## create models from database tables
+## create model class from database tables
+
+$ php model [table_name] [path_to_the_model] [class_name]
+
+The path_to_the_model should have front slashes and follow from Models folder.
+
 ```bash
 $ php model tbl_users Auth Users
 
 Created File : app/Models/Auth/Users.php
+```
+
+## create repository classes from database tables
+
+The repository classes include the create and update request classes and the model repository classes.
+
+$ php repo [module_path/] [module_name] [optional:model_class_name]
+
+module_path -> should have front slashes and follow from Modules folder.
+module_name -> the class name prefix that you require
+model_class_name(optional) -> if the repository should be associated with a model class then the name of the model class
+
+```bash
+$ php repo Auth User Users
+
+Creating directory app/Modules/Auth/User
+Creating directory app/Modules/Auth/User/Requests
+Created File : app/Modules/Auth/User/Requests/CreateUserRequest.php
+Created File : app/Modules/Auth/User/Requests/UpdateUserRequest.php
+Creating directory app/Modules/Auth/User/Repositories
+Created File : app/Modules/Auth/User/Repositories/UserRepository.php
+Created File : app/Modules/Auth/User/Repositories/UserRepositoryImplementation.php
+Created Module : Auth/User
 ```
