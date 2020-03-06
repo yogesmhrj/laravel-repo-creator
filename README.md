@@ -97,14 +97,16 @@ $ php model tbl_users Auth Users
 Created File : app/Models/Auth/Users.php
 ```
 
-## create repository classes from database tables
+## create repository classes
 
 The repository classes include the create and update request classes and the model repository classes.
 
 $ php repo [module_path/] [module_name] [optional:model_class_name]
 
 module_path -> should have front slashes and follow from Modules folder.
+
 module_name -> the class name prefix that you require
+
 model_class_name(optional) -> if the repository should be associated with a model class then the name of the model class
 
 ```bash
