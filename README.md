@@ -1,7 +1,7 @@
 # Laravel Repo Creator
 Laravel Model and Repo creator for laravel framework
 
-This library is ment to help create Repositories and Model classes when working on laravel repository pattern.
+This library is ment to help create Repositories and Model classes when working on laravel repository pattern and assumes that you have experience with *Laravel Repository Pattern*.
 
 # Pre-requirement
 
@@ -121,3 +121,4 @@ Created File : app/Modules/Auth/User/Repositories/UserRepository.php
 Created File : app/Modules/Auth/User/Repositories/UserRepositoryImplementation.php
 Created Module : Auth/User
 ```
+This will also add specific lines in app/Providers/DependencyInjectionServiceProvider.php to inject the repositories into the controllers.
