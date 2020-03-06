@@ -1,0 +1,150 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Created by yogesh on 07 07, 2019.
+ *
+ */
+
+function createModules($argv){
+
+    $moduleNamePrefix = $argv[1];
+
+    $modelName = null;
+    if(array_key_exists(3,$argv)){
+        $modelName = $argv[3];
+    }
+    $parts = explode('/',$moduleNamePrefix);
+
+    $moduleName = ucfirst($argv[2]);
+
+    $namespace = "App\Modules".'\\'.str_replace('/','\\',$moduleNamePrefix);
+
+    ensureDirExists('app/Modules/'.$moduleNamePrefix);
+
+    //create Requests
+    $requestsDir = 'app/Modules/'.$moduleNamePrefix."/Requests";
+    ensureDirExists($requestsDir);
+
+    $className = "Create".$moduleName."Request";
+    $fileToWrite = fopen($requestsDir."/".$className.".php", "w");
+    fwrite($fileToWrite,getPhpHeaders());
+    fwrite($fileToWrite,"namespace ".$namespace."\Requests".";\n\n");
+    fwrite($fileToWrite,"use "."App\Modules\Framework\Request".";\n\n");
+    fwrite($fileToWrite,getClassStructure($className,'Request'));
+    fclose($fileToWrite);
+    echo "\n";
+    echo "Created File : ".$requestsDir."/".$className.".php";
+
+    $className = "Update".$moduleName."Request";
+    $fileToWrite = fopen($requestsDir."/".$className.".php", "w");
+    fwrite($fileToWrite,getPhpHeaders());
+    fwrite($fileToWrite,"namespace ".$namespace."\Requests".";\n\n");
+    fwrite($fileToWrite,"use "."App\Modules\Framework\Request".";\n\n");
+    fwrite($fileToWrite,getClassStructure($className,'Request'));
+    fclose($fileToWrite);
+    echo "\n";
+    echo "Created File : ".$requestsDir."/".$className.".php";
+
+    //create Requests
+    $requestsDir = 'app/Modules/'.$moduleNamePrefix."/Repositories";
+    ensureDirExists($requestsDir);
+
+    $interfaceName = $moduleName."Repository";
+    $fileToWrite = fopen($requestsDir."/".$interfaceName.".php", "w");
+    fwrite($fileToWrite,getPhpHeaders());
+    fwrite($fileToWrite,"namespace ".$namespace."\Repositories".";\n\n");
+    fwrite($fileToWrite,"use "."App\Modules\Framework\Repository".";\n\n");
+    fwrite($fileToWrite,getInterfaceStructure($interfaceName,'Repository'));
+    fclose($fileToWrite);
+    echo "\n";
+    echo "Created File : ".$requestsDir."/".$interfaceName.".php";
+
+    $className = $moduleName."RepositoryImplementation";
+    $fileToWrite = fopen($requestsDir."/".$className.".php", "w");
+    fwrite($fileToWrite,getPhpHeaders());
+    fwrite($fileToWrite,"namespace ".$namespace."\Repositories".";\n\n");
+    fwrite($fileToWrite,"use "."App\Modules\Framework\RepositoryImplementation".";\n\n");
+    fwrite($fileToWrite,getClassStructure($className,'RepositoryImplementation',$interfaceName,$modelName));
+    fclose($fileToWrite);
+    echo "\n";
+    echo "Created File : ".$requestsDir."/".$className.".php";
+    echo "\n";
+    echo "Created Module : ".$moduleNamePrefix;
+    echo "\n*****************************************************\n";
+
+    //creating dependency
+    $dependencyFilePath = __DIR__."/app/Providers/DependencyInjectionServiceProvider.php";
+
+    //new dependency
+    $replacement = "\t\t".'$this->app->bind('.
+        "\n            \\".$namespace."\Repositories\\".$interfaceName."::class,".
+        "\n            \\".$namespace.'\Repositories\\'.$className."::class".
+        "\n\t\t);\n\n\n";
+
+    $contents = file($dependencyFilePath);
+    $size = count($contents);
+    $contents[$size-3] = $replacement; // point it to the second last line and assign
+    $temp = implode("", $contents);
+    file_put_contents($dependencyFilePath, $temp);
+    echo "Updated ".$dependencyFilePath."\n";
+}
+
+function ensureDirExists($dir) {
+    if (!is_dir($dir)) {
+        echo "\n"."Creating directory ".$dir;
+        mkdir($dir, 0777, true);
+    }
+}
+
+function getPhpHeaders(){
+    $date = date('Y-m-d');
+    return  "<?php 
+/**
+ * Created by Repository Creator on $date
+ * @author : yogesh (metal4yogesh@gmail.com)
+ *
+ */
+\n";
+}
+
+function getClassStructure($classname,$extends = null,$implements = null,$modelName = null){
+    if(!$modelName) {
+        if ($extends == null && $implements == null) {
+            return "class $classname { \n \n}";
+        } else if ($implements == null) {
+            return "class $classname extends $extends { \n \n}";
+        } else {
+            return "class $classname extends $extends implements $implements { \n \n}";
+        }
+    }else{
+        if ($extends == null && $implements == null) {
+            return "class $classname { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n}";
+        } else if ($implements == null) {
+            return "class $classname extends $extends { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n}";
+        } else {
+            return "class $classname extends $extends implements $implements { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n}";
+        }
+    }
+}
+
+function getInterfaceStructure($classname,$extends = null,$implements = null){
+    if($extends == null && $implements == null){
+        return "interface $classname { \n \n}";
+    }else if($implements == null){
+        return "interface $classname extends $extends { \n \n}";
+    }else{
+        return "interface $classname extends $extends implements $implements { \n \n}";
+    }
+}
+
+if(isset($argv)){
+    if(array_key_exists(1,$argv)){
+        createModules($argv);
+    }else{
+        echo "\n";
+        echo "\e[91m Syntax Error! Should be : php repo [module_path/] [module_name] [optional:model_class_name]";
+        echo "\n\n";
+    }
+}
+
+

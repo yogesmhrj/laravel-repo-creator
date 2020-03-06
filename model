@@ -1,0 +1,282 @@
+#!/usr/bin/env php
+<?php
+
+//get the env vaiables
+$environment = [];
+
+$envFile = fopen(__DIR__."/.env","r");
+while(! feof($envFile))
+{
+    $parts = explode("=",fgets($envFile));
+    $environment[$parts[0]] = trim($parts[1]);
+}
+fclose($envFile);
+
+class DbOpenHelper {
+
+
+    private $connection = null;
+
+    private $dbHost = "";
+    private $dbUser = "";
+    private $dbPass = "";
+    private $dbName = "";
+
+    private $schemaResource = null;
+    private $columns = null;
+
+    private $error = "";
+
+
+    public function __construct(){
+
+    }
+
+
+    public function setHost($host){
+        $this->dbHost = $host;
+        return $this;
+    }
+
+
+    public function setUser($user){
+        $this->dbUser = $user;
+        return $this;
+    }
+
+    public function setPass($pass){
+        $this->dbPass = $pass;
+        return $this;
+    }
+
+    public function setName($name){
+        $this->dbName = $name;
+        return $this;
+    }
+
+    public function getError(){
+        return $this->error;
+    }
+
+    public function connect(){
+        $this->connection = mysqli_connect($this->dbHost,$this->dbUser,$this->dbPass);
+    }
+
+    public function connectDb(){
+        $this->connection = mysqli_connect($this->dbHost,$this->dbUser,$this->dbPass,$this->dbName);
+    }
+
+    public function getConnection(){
+        return $this->connection;
+    }
+
+    public function getTableSchema($dbName = ""){
+        if($dbName == ""){
+            $dbName = $this->dbName;
+        }
+
+        $sql = "select * from information_schema.columns 
+		where table_schema = '".$dbName."' 
+		order by table_name,ordinal_position";
+
+        $this->schemaResource = mysqli_query($this->connection,$sql);
+
+        $this->columns = mysqli_fetch_all($this->schemaResource,MYSQLI_ASSOC);
+        return $this->columns;
+    }
+
+    public function getTables(){
+
+        $tables = array();
+
+        foreach($this->columns as $column){
+
+            if(!array_key_exists($column['TABLE_NAME'],$tables)){
+                $tables[$column['TABLE_NAME']] = array();
+            }
+            $tables[$column['TABLE_NAME']][$column['COLUMN_NAME']] = array($column['COLUMN_NAME'],$column['COLUMN_TYPE'],$column['COLUMN_KEY']);
+        }
+
+        return $tables;
+    }
+
+    public function getCreateTableDDL($tableName){
+
+        $sql = "Show Create Table ".$tableName;
+
+        $resource = mysqli_query($this->connection,$sql);
+
+        return mysqli_fetch_all($resource,MYSQLI_ASSOC)[0]['Create Table'];
+    }
+
+
+    public function executeQueries(array $queries){
+        $this->error = "";
+        if($this->connection != null){
+
+            foreach ($queries as $key => $value) {
+
+                $result = mysqli_query($this->connection,$value);
+                if(!$result){
+                    $this->error = mysqli_error($this->connection)."\n".nl2br($value);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    public function executeQuery($query){
+        if($this->connection != null){
+            $result = mysqli_query($this->connection,$query);
+            if(!$result){
+                $this->error = mysqli_error($this->connection)."\n".nl2br($query);
+                return false;
+            }else{
+                return mysqli_fetch_all($result,MYSQLI_ASSOC);
+            }
+        }else{
+            return false;
+        }
+    }
+
+    public function insert($value){
+        if($this->connection != null){
+            $result = mysqli_query($this->connection,$value);
+            if(!$result){
+                $this->error = mysqli_error($this->connection)."\n".nl2br($value);
+                return false;
+            }else{
+                return mysqli_insert_id($this->connection);
+            }
+        }else{
+            return false;
+        }
+    }
+}
+
+function getFillables($TABLE_NAME){
+
+    global $DH_HELPER; $dbHelper = $DH_HELPER;
+
+    $PRIMARY_KEY_RESULTS = $dbHelper->executeQuery("SHOW KEYS FROM $TABLE_NAME WHERE Key_name = 'PRIMARY'");
+
+    if(!$PRIMARY_KEY_RESULTS){
+        echo $dbHelper->getError();
+    }
+
+    $PRIMARY_KEY = "id";
+
+    foreach ($PRIMARY_KEY_RESULTS as $row){
+        $PRIMARY_KEY = $row['Column_name'];
+    }
+
+    $columns = $dbHelper->executeQuery("SHOW COLUMNS FROM $TABLE_NAME;");
+
+    if(!$columns){
+        echo $dbHelper->getError();
+    }
+
+    $data = "\tprotected  \$table = '$TABLE_NAME';\n\n\tprotected \$primaryKey = '$PRIMARY_KEY';\n\n\t/**\n\t * The attributes that are mass assignable.\n\t *\n\t * @var array \n\t */\n\tprotected \$fillable = [\n";
+
+    foreach ($columns as $key => $column) {
+        if($column['Field'] != $PRIMARY_KEY) {
+            $data .= "\t\t'" . $column['Field'] . "',\n";
+        }
+    }
+
+    $data .= "\t];";
+
+    return $data;
+}
+
+function ensureDirExists($dir) {
+    if (!is_dir($dir)) {
+        echo "\n"."Creating directory ".$dir;
+        mkdir($dir, 0777, true);
+    }
+}
+
+function getPhpHeaders(){
+    $date = date('Y-m-d');
+    return  "<?php 
+/**
+ * Created by Repository Creator on $date
+ * @author : yogesh (metal4yogesh@gmail.com)
+ *
+ */
+\n";
+}
+
+function getClassStructure($classname,$extends = null,$implements = null,$modelName = null,$classContent = null){
+    if(!$modelName) {
+        if ($extends == null && $implements == null) {
+            return "class $classname { \n \n}";
+        } else if ($implements == null) {
+            return "class $classname extends $extends { \n \n}";
+        } else {
+            return "class $classname extends $extends implements $implements { \n \n}";
+        }
+    }else{
+        if ($extends == null && $implements == null) {
+            return "class $classname { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n$classContent \n\n}";
+        } else if ($implements == null) {
+            return "class $classname extends $extends { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n$classContent \n\n}";
+        } else {
+            return "class $classname extends $extends implements $implements { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n$classContent \n\n}";
+        }
+    }
+}
+
+function createModel($argv){
+
+    $tableName = $argv[1];
+
+    $moduleNamePrefix = $argv[2];
+
+    $modelName = null;
+    if(array_key_exists(3,$argv)){
+        $modelName = $argv[3];
+    }
+    $parts = explode('/',$moduleNamePrefix);
+
+    $moduleName = ucfirst($argv[3]);
+
+    $namespace = "App\Models".'\\'.str_replace('/','\\',$moduleNamePrefix);
+
+    ensureDirExists('app/Models/'.$moduleNamePrefix);
+
+    $requestsDir = 'app/Models/'.$moduleNamePrefix;
+
+    $modelClassContent =  getFillables($tableName);
+
+    $fileToWrite = fopen($requestsDir."/".$moduleName.".php", "w");
+    fwrite($fileToWrite,getPhpHeaders());
+    fwrite($fileToWrite,"namespace ".$namespace.";\n\n");
+    fwrite($fileToWrite,"use Illuminate\Database\Eloquent\Model".";\n\n");
+    fwrite($fileToWrite,getClassStructure($moduleName,'Model',null,$moduleName,$modelClassContent));
+    fclose($fileToWrite);
+    echo "\n";
+    echo "Created File : ".$requestsDir."/".$moduleName.".php";
+
+}
+
+global $DH_HELPER;
+
+$DH_HELPER = new DbOpenHelper();
+$DH_HELPER->setHost("localhost")
+    ->setUser($environment['DB_USERNAME'])
+    ->setPass($environment['DB_PASSWORD'])
+    ->setName($environment['DB_DATABASE'])
+    ->connectDb();
+
+if(isset($argv)){
+    if(count($argv) > 3){
+        createModel($argv);
+    }else{
+        echo "\n";
+        echo "\e[91m Syntax Error! Should be : php model [table_name] [model_path/] [model_name]";
+        echo "\n\n";
+    }
+}
