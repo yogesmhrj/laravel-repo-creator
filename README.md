@@ -121,9 +121,9 @@ Created File : app/Modules/Auth/User/Repositories/UserRepository.php
 Created File : app/Modules/Auth/User/Repositories/UserRepositoryImplementation.php
 Created Module : Auth/User
 ```
-This will create a new ServiceProvider called *DependencyInjectionServiceProvider* in App\Providers add specific lines in app/Providers/DependencyInjectionServiceProvider.php to inject the repositories into the controllers.
+This will create a new ServiceProvider called `DependencyInjectionServiceProvider` in App\Providers if already not available and add specific lines to initialize the repositories making it suitable to inject the repositories into the controllers.
 
-NOTE: Please ensure that the App\Providers\DependencyInjectionServiceProvider has been included in `providers` array on config\app.php
+NOTE: Please ensure that the `App\Providers\DependencyInjectionServiceProvider` has been included in `providers` array on `config\app.php`
 
 ```php
 'providers' => [
