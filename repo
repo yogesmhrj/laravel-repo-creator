@@ -72,8 +72,26 @@ function createModules($argv){
     echo "Created Module : ".$moduleNamePrefix;
     echo "\n*****************************************************\n";
 
+    ensureDirExists(__DIR__."/app/Providers");
+
     //creating dependency
     $dependencyFilePath = __DIR__."/app/Providers/DependencyInjectionServiceProvider.php";
+
+    //check if the dependency file exists
+    if(!file_exists($dependencyFilePath)){
+        $classContent = "\n\t/**\n\t * Bootstrap the application services.\n\t *\n\t * @return void \n\t */\n\tpublic function boot(){\n\n\t\t// \n\n\t}";
+        $classContent .= "\n\n\t/**\n\t * Register the application services.\n\t *\n\t * @return void \n\t */\n\tpublic function register(){\n\n\t\t//Add your repository dependency injections here.";
+        $classContent .= "\n\t\t//\$this->app->bind(\n\t\t//\t\App\Modules\...\Repositories\UserRepository::class,\n\t\t//\t\App\Modules\System\...\Repositories\UserRepositoryImplementation::class\n\t\t//);\n\n\n\t}\n";
+        //create file
+        $dependencyFile = fopen($dependencyFilePath,'w');
+        fwrite($dependencyFile,getPhpHeaders());
+        fwrite($dependencyFile,"namespace App\Providers;\n\n");
+        fwrite($dependencyFile,"use Illuminate\Support\ServiceProvider;\n\n");
+        fwrite($dependencyFile,getClassStructure('DependencyInjectionServiceProvider','ServiceProvider',null,null,$classContent));
+        fclose($dependencyFile);
+        echo "\nInjecting Repository Dependencies.";
+        echo "\nCreated Dependency File : ".$dependencyFilePath;
+    }
 
     //new dependency
     $replacement = "\t\t".'$this->app->bind('.
@@ -86,7 +104,7 @@ function createModules($argv){
     $contents[$size-3] = $replacement; // point it to the second last line and assign
     $temp = implode("", $contents);
     file_put_contents($dependencyFilePath, $temp);
-    echo "Updated ".$dependencyFilePath."\n";
+    echo "\nUpdated ".$dependencyFilePath."\n";
 }
 
 function ensureDirExists($dir) {
@@ -107,22 +125,27 @@ function getPhpHeaders(){
 \n";
 }
 
-function getClassStructure($classname,$extends = null,$implements = null,$modelName = null){
+function getClassStructure($classname,$extends = null,$implements = null,$modelName = null,$classContent = null){
+    if($classContent != null){
+        $classContent = "\n\n\t$classContent";
+    }else{
+        $classContent = "\n\n";
+    }
     if(!$modelName) {
         if ($extends == null && $implements == null) {
-            return "class $classname { \n \n}";
+            return "class $classname { $classContent }";
         } else if ($implements == null) {
-            return "class $classname extends $extends { \n \n}";
+            return "class $classname extends $extends { $classContent }";
         } else {
-            return "class $classname extends $extends implements $implements { \n \n}";
+            return "class $classname extends $extends implements $implements { $classContent }";
         }
     }else{
         if ($extends == null && $implements == null) {
-            return "class $classname { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n}";
+            return "class $classname { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t}$classContent}";
         } else if ($implements == null) {
-            return "class $classname extends $extends { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n}";
+            return "class $classname extends $extends { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t}$classContent}";
         } else {
-            return "class $classname extends $extends implements $implements { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n}";
+            return "class $classname extends $extends implements $implements { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t}$classContent}";
         }
     }
 }

@@ -8,7 +8,9 @@ $envFile = fopen(__DIR__."/.env","r");
 while(! feof($envFile))
 {
     $parts = explode("=",fgets($envFile));
-    $environment[$parts[0]] = trim($parts[1]);
+    if(count($parts) > 1) {
+        $environment[$parts[0]] = trim($parts[1]);
+    }
 }
 fclose($envFile);
 
@@ -202,30 +204,20 @@ function getPhpHeaders(){
     $date = date('Y-m-d');
     return  "<?php 
 /**
- * Created by Repository Creator on $date
+ * Created by Model Creator on $date
  * @author : yogesh (metal4yogesh@gmail.com)
  *
  */
 \n";
 }
 
-function getClassStructure($classname,$extends = null,$implements = null,$modelName = null,$classContent = null){
-    if(!$modelName) {
-        if ($extends == null && $implements == null) {
-            return "class $classname { \n \n}";
-        } else if ($implements == null) {
-            return "class $classname extends $extends { \n \n}";
-        } else {
-            return "class $classname extends $extends implements $implements { \n \n}";
-        }
-    }else{
-        if ($extends == null && $implements == null) {
-            return "class $classname { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n$classContent \n\n}";
-        } else if ($implements == null) {
-            return "class $classname extends $extends { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n$classContent \n\n}";
-        } else {
-            return "class $classname extends $extends implements $implements { \n\n\tpublic function getModel(){\n\n\t\treturn new $modelName();\n\n\t} \n\n$classContent \n\n}";
-        }
+function getClassStructure($classname,$extends = null,$implements = null,$classContent = null){
+    if ($extends == null && $implements == null) {
+        return "class $classname { \n\n$classContent \n\n}";
+    } else if ($implements == null) {
+        return "class $classname extends $extends { \n\n$classContent \n\n}";
+    } else {
+        return "class $classname extends $extends implements $implements { \n\n$classContent \n\n}";
     }
 }
 
@@ -255,10 +247,10 @@ function createModel($argv){
     fwrite($fileToWrite,getPhpHeaders());
     fwrite($fileToWrite,"namespace ".$namespace.";\n\n");
     fwrite($fileToWrite,"use Illuminate\Database\Eloquent\Model".";\n\n");
-    fwrite($fileToWrite,getClassStructure($moduleName,'Model',null,$moduleName,$modelClassContent));
+    fwrite($fileToWrite,getClassStructure($moduleName,'Model',null,$modelClassContent));
     fclose($fileToWrite);
     echo "\n";
-    echo "Created File : ".$requestsDir."/".$moduleName.".php";
+    echo "Created File : ".$requestsDir."/".$moduleName.".php\n";
 
 }
 
