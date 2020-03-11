@@ -183,7 +183,7 @@ function getFillables($TABLE_NAME){
     $data = "\tprotected  \$table = '$TABLE_NAME';\n\n\tprotected \$primaryKey = '$PRIMARY_KEY';\n\n\t/**\n\t * The attributes that are mass assignable.\n\t *\n\t * @var array \n\t */\n\tprotected \$fillable = [\n";
 
     foreach ($columns as $key => $column) {
-        if($column['Field'] != $PRIMARY_KEY) {
+        if($column['Field'] != $PRIMARY_KEY && $column['Field'] != "created_at" && $column['Field'] != "updated_at" && $column['Field'] != "deleted_at") {
             $data .= "\t\t'" . $column['Field'] . "',\n";
         }
     }
