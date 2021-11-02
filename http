@@ -1,0 +1,130 @@
+#!/usr/bin/env php
+<?php
+
+function createController($argv){
+
+    $controllerPathName = $argv[1];
+
+    $parts = explode('/',$controllerPathName);
+
+    $controllerName = ucfirst($argv[2]);
+    $controllerNamePlural = ucfirst($argv[3]);
+
+    $namespace = "App\Http\Controllers".'\\'.str_replace('/','\\',$controllerPathName);
+
+    //create Controllers
+    $requestsDir = 'app/Http/Controllers/'.$controllerPathName;
+    ensureDirExists($requestsDir);
+
+    $relativePath = strtolower($controllerPathName)."/".strtolower($controllerNamePlural);
+
+    $className = $controllerName."Controller";
+    $fileToWrite = fopen($requestsDir."/".$className.".php", "w");
+    fwrite($fileToWrite,getPhpHeaders());
+    fwrite($fileToWrite,"namespace ".$namespace.";\n\n");
+    fwrite($fileToWrite,"use "."App\Http\Controllers\System\BaseController".";\n\n");
+    fwrite($fileToWrite,getClassStructure($className,$controllerName,$controllerNamePlural,'BaseController',$relativePath));
+    fclose($fileToWrite);
+    echo "\n";
+    echo "Created Controller : ".$requestsDir."/".$className.".php";
+    echo "\n";
+
+    //create views
+    $requestsDir = 'resources/views/'.$relativePath;
+    ensureDirExists($requestsDir);
+
+    $bladeFiles = ['index','create','detail','edit','form','index'];
+
+    foreach ($bladeFiles as $file){
+        $bladeName = $file.".blade";
+        $fileToWrite = fopen($requestsDir."/".$bladeName.".php", "w");
+        fwrite($fileToWrite,getViewStructure($controllerName,$controllerNamePlural,$file,$relativePath));
+        fclose($fileToWrite);
+        echo "\n";
+        echo "Created View File : ".$requestsDir."/".$bladeName.".php";
+
+    }
+
+    $includes = ['table_head','table_row'];
+
+    $requestsDir = $requestsDir."/includes";
+    ensureDirExists($requestsDir);
+
+    foreach ($includes as $file){
+        $bladeName = $file.".blade";
+        $fileToWrite = fopen($requestsDir."/".$bladeName.".php", "w");
+        fwrite($fileToWrite,getViewStructure($controllerName,$controllerNamePlural,$file));
+        fclose($fileToWrite);
+        echo "\n";
+        echo "Created View File : ".$requestsDir."/".$bladeName.".php";
+
+    }
+
+    echo "\n*****************************************************\n";
+}
+
+function ensureDirExists($dir) {
+    if (!is_dir($dir)) {
+        echo "\n"."Creating directory ".$dir;
+        mkdir($dir, 0777, true);
+    }
+}
+
+function getPhpHeaders(){
+    $date = date('Y-m-d');
+    return  "<?php 
+/**
+ * Created by Controller Creator on $date
+ * @author : yogesh (metal4yogesh@gmail.com)
+ *
+ */
+\n";
+}
+
+function getClassStructure($classname,$modelName, $modelNamePlural,$extends = null,$viewPath = null){
+    $classContents = getClassContents($modelName,$modelNamePlural,$viewPath);
+    if ($extends == null) {
+        return "class $classname { \n$classContents \n}";
+    } else{
+        return "class $classname extends $extends { \n$classContents \n}";
+    }
+}
+
+function getClassContents($modelName,$modelNamePlural,$viewFilePath){
+    $viewFilePath = str_replace("/",".",strtolower($viewFilePath));
+    $modelNameLower = strtolower($modelName);
+    $modelNamePluralLower = strtolower($modelNamePlural);
+    return "\n\tpublic function __construct(){\n\n\t\tparent::__construct();\n\n\t}\n\n\tpublic function index(){\n\n\t\t\$$modelNamePluralLower = [];\n\n\t\treturn view('$viewFilePath.index', compact('$modelNamePluralLower'));\n\t}\n\n\tpublic function create(){\n\n\t\treturn view('$viewFilePath.create');\n\t}\n\n\tpublic function store(Create{$modelName}Request \$request){\n\n\t}\n\n\tpublic function show(\$id){\n\n\t\t\$$modelNameLower = [];\n\t\treturn view('$viewFilePath.detail',compact('$modelNameLower'));\n\t}\n\n\tpublic function edit(\$id){\n\n\t\t\$$modelNameLower = [];\n\t\treturn view('$viewFilePath.edit',compact('$modelNameLower'));\n\t}\n\n\tpublic function update(Update{$modelName}Request \$request,\$id){\n\n\t}\n\n\tpublic function destroy(\$id){\n\n\t}\n\n\tpublic function getDelete(\$id){\n\n\t\treturn \$this->view('partials.modal.delete');\n\t}\n\n\tpublic function postDelete(\$id){\n\n\t}";
+
+}
+
+function getViewStructure($modelName, $pluralName, $context, $include = null){
+    switch($context){
+        default:
+            return "";
+        case 'index':
+            return "@extends('system.layout.facades.base') \n \n@section('title') $pluralName | @endsection \n \n@push('styles') \n \n@endpush\n\n@section('bread-crumbs')\n\t@include('system.layout.components.breadcrumbs',[\n\t\t'bread_crumbs' => []\n\t])\n@endsection\n\n<?php \$key = \"\"; ?>\n@section('content') \n \n@endsection\n\n@push('scripts') \n \n@endpush";
+        case 'create':
+            $include = str_replace("/",".",strtolower($include)).".form";
+            return "@extends('system.layout.facades.base') \n \n @section('title') Add New $modelName | @endsection \n \n@push('styles') \n \n@endpush \n \n@section('content') \n \n@include('$include') \n \n@endsection";
+        case 'edit':
+            $injmodelName = strtolower($modelName);
+            $include = str_replace("/",".",strtolower($include)).".form";
+            return "@extends('system.layout.facades.base') \n \n @section('title') Edit $modelName | @endsection \n \n@push('styles') \n \n@endpush \n \n@section('content') \n \n@include('$include',[ 'model' => \$$injmodelName ]) \n \n@endsection\n\n@push('scripts') \n \n@endpush";
+        case 'form':
+            return "";
+        case 'detail':
+            return "";
+    }
+
+}
+
+if(isset($argv)){
+    if(array_key_exists(3,$argv)){
+        createController($argv);
+    }else{
+        echo "\n";
+        echo "\e[91m Syntax Error! Should be : php http [controller_path/] [controller_name] [controller_name_plural]";
+        echo "\n\n";
+    }
+}

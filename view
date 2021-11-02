@@ -1,0 +1,13 @@
+<?php
+echo "Are you sure you want to do this?  Type the table name to continue ";
+$handle = fopen ("php://stdin","rb");
+$line = fgets($handle);
+echo "\n You entered : ".$line;
+
+echo "Are you sure you want to do this?  Type the model name to continue ";
+$handle = fopen ("php://stdin","rb");
+$line = fgets($handle);
+
+echo "\n You entered : ".$line;
+
+echo "Thank you, continuing...\n";
